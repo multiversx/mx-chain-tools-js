@@ -1,5 +1,7 @@
 const INDEX = 0;
+const WALLET_GENERATION_PASSWORD = '';
 
 module.exports = {
-  INDEX
+  INDEX,
+  WALLET_GENERATION_PASSWORD
 };
