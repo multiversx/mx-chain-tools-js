@@ -1,3 +1,5 @@
+const fs = require('fs');
+const ethers = require('ethers');
 const { SHARD_ID } = require('./vars');
 const { Mnemonic } = require('@elrondnetwork/erdjs');
 
@@ -11,8 +13,18 @@ while (true) {
     continue;
   }
 
-  console.log(`found mnemonic for shard ${SHARD_ID} with address: ${addr}`);
-  console.log(m.toString());
+  const keyToEncode = Buffer.concat([secretKey.valueOf(), secretKey.generatePublicKey().valueOf()]);
+  const pemFile = generatePEM(addr, keyToEncode);
+  const ethWallet = generateEthWallet(m.toString());
+
+  const fileNameElrond = process.argv[2] || addr;
+  const filenameEth = process.argv[2] || ethWallet.address;
+
+  fs.writeFileSync(`${fileNameElrond}.pem`, pemFile);
+  fs.writeFileSync(`${filenameEth}.sk`, ethWallet.privateKey.slice(2));
+
+  console.log(`Generated Elrond Pem ${fileNameElrond}.pem with address: ${addr}`);
+  console.log(`Generated Ethereum SK ${filenameEth}.sk with address: ${ethWallet.address}`);
 
   break;
 }
@@ -37,4 +49,17 @@ function computeShardID(pubKey) {
   }
 
   return shard;
-};
+}
+
+function generatePEM(address, privateKey) {
+  let keyBuff = [];
+  [...privateKey.toString('hex')].map(hexBuff => keyBuff.push(Buffer.from(hexBuff)));
+
+  return `-----BEGIN PRIVATE KEY for ${address}-----\r\n${Buffer.concat(keyBuff).toString('base64')}\r\n-----END PRIVATE KEY for ${address}-----`
+}
+
+function generateEthWallet(mnemonic, index = 0) {
+  let hdnode = ethers.utils.HDNode.fromMnemonic(mnemonic);
+  hdnode = hdnode.derivePath(`m/44'/60'/0'/0/${index}`);
+  return new ethers.Wallet(hdnode.privateKey);
+}
