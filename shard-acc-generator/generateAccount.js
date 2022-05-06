@@ -22,9 +22,11 @@ while (true) {
 
   fs.writeFileSync(`${fileNameElrond}.pem`, pemFile);
   fs.writeFileSync(`${filenameEth}.sk`, ethWallet.privateKey.slice(2));
+  fs.writeFileSync(`${fileNameElrond}.mnemonic`, m.toString());
 
   console.log(`Generated Elrond Pem ${fileNameElrond}.pem with address: ${addr}`);
   console.log(`Generated Ethereum SK ${filenameEth}.sk with address: ${ethWallet.address}`);
+  console.log(`Generated mnemonic file ${fileNameElrond}.mnemonic`);
 
   break;
 }
