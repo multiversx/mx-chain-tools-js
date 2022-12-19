@@ -1,7 +1,7 @@
 const fs = require('fs');
 const ethers = require('ethers');
 const { SHARD_ID } = require('./vars');
-const { Mnemonic } = require('@elrondnetwork/erdjs');
+const { Mnemonic, UserWallet } = require('@elrondnetwork/erdjs-walletcore');
 
 while (true) {
   const m = Mnemonic.generate();
@@ -20,7 +20,10 @@ while (true) {
   const fileNameElrond = process.argv[2] || addr;
   const filenameEth = process.argv[2] || ethWallet.address;
 
+  const keyfile = new UserWallet(secretKey, "");
+
   fs.writeFileSync(`${fileNameElrond}.pem`, pemFile);
+  fs.writeFileSync(`${fileNameElrond}.json`, JSON.stringify(keyfile.toJSON()));
   fs.writeFileSync(`${filenameEth}.sk`, ethWallet.privateKey.slice(2));
   fs.writeFileSync(`${fileNameElrond}.mnemonic`, m.toString());
 
