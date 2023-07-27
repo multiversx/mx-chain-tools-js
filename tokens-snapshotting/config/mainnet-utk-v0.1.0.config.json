@@ -1,0 +1,91 @@
+{
+    "tokens": [
+        "UTK-2f80e9",
+        "UTKWEGLD-c960d1",
+        "UTKWEGLDF-5b9d50",
+        "UTKWEGLDFL-082aec",
+        "UTKWEGLDFL-ba26d2",
+        "SUTK-ba35f3",
+        "METAUTK-291e0e",
+        "METAUTKLK-e6a445",
+        "METAUTKLK-112f52"
+    ],
+    "tokensMetadata": {
+        "UTK-2f80e9": {
+            "isBaseToken": true
+        },
+        "METAUTKLK-112f52": {
+            "isMetastakingToken": true
+        },
+        "METAUTKLK-e6a445": {
+            "isMetastakingToken": true
+        },
+        "METAUTK-291e0e": {
+            "isMetastakingToken": true
+        },
+        "SUTK-ba35f3": {
+            "isStakingToken": true
+        },
+        "UTKWEGLD-c960d1": {
+            "isLPToken": true
+        },
+        "UTKWEGLDFL-ba26d2": {
+            "isFarmToken": true,
+            "isFarmTokenV2": true
+        },
+        "UTKWEGLDFL-082aec": {
+            "isFarmToken": true,
+            "isFarmTokenV1_3": true
+        },
+        "UTKWEGLDF-5b9d50": {
+            "isFarmToken": true,
+            "isFarmTokenV1_3": true
+        }
+    },
+    "farms": [
+        {
+            "token": "UTKWEGLDF-5b9d50",
+            "address": "erd1qqqqqqqqqqqqqpgqmaj6qc4c6f9ldkuwllqh7pyd8e9yu3m82jpscc6f9s",
+            "stateFilename": "state_farm_UTKWEGLDF-5b9d50.json"
+        },
+        {
+            "token": "UTKWEGLDFL-082aec",
+            "address": "erd1qqqqqqqqqqqqqpgq3f8jfeg34ujzy0muhe9dvn5yngwgud022jpsscjxgl",
+            "stateFilename": "state_farm_UTKWEGLDFL-082aec.json"
+        },
+        {
+            "token": "UTKWEGLDFL-ba26d2",
+            "address": "erd1qqqqqqqqqqqqqpgq4acurmluezvmhna8tztgcrnwh0l70a2wkp2sfh6jkp",
+            "stateFilename": "state_farm_UTKWEGLDFL-ba26d2.json"
+        },
+        {
+            "token": "SUTK-ba35f3",
+            "address": "erd1qqqqqqqqqqqqqpgqcedkmj8ezme6mtautj79ngv7fez978le2jps8jtawn",
+            "stateFilename": "state_farm_SUTK-ba35f3.json"
+        }
+    ],
+    "metastakingFarms": [
+        {
+            "token": "METAUTK-291e0e",
+            "address": "erd1qqqqqqqqqqqqqpgqv692rgsd6teaq78nufvgkgjnmca6anqn2jpsphphj6",
+            "stateFilename": "state_farm_metastaking_METAUTK-291e0e.json"
+        },
+        {
+            "token": "METAUTKLK-e6a445",
+            "address": "erd1qqqqqqqqqqqqqpgq6zat6jefz9z8n54yag8xmz7jw20vlv3x2jpsxms0sd",
+            "stateFilename": "state_farm_metastaking_METAUTKLK-e6a445.json"
+        },
+        {
+            "token": "METAUTKLK-112f52",
+            "address": "erd1qqqqqqqqqqqqqpgqmgd0eu4z9kzvrputt4l4kw4fqf2wcjsekp2sftan7s",
+            "stateFilename": "state_farm_metastaking_METAUTKLK-112f52.json"
+        }
+    ],
+    "pools": [
+        {
+            "token": "UTKWEGLD-c960d1",
+            "address": "erd1qqqqqqqqqqqqqpgq0lzzvt2faev4upyf586tg38s84d7zsaj2jpsglugga",
+            "stateFilename": "state_pool_UTKWEGLD-c960d1.json"
+        }
+    ]
+}
