@@ -1,7 +1,7 @@
 const path = require("path");
 const { BigNumber } = require("bignumber.js");
 const { asUserPath, readJsonFile, writeJsonFile } = require("./filesystem");
-const { BunchOfAccounts, FarmsSummary, PoolsSummary, formatAmount } = require("./utils.js");
+const { BunchOfAccounts, ContractsSummary, formatAmount } = require("./utils.js");
 const minimist = require("minimist");
 
 BigNumber.config({ DECIMAL_PLACES: 128 });
@@ -9,12 +9,16 @@ BigNumber.config({ DECIMAL_PLACES: 128 });
 async function main(args) {
     const parsedArgs = minimist(args);
     const workspace = asUserPath(parsedArgs.workspace);
+    const configFile = parsedArgs.config;
 
     if (!workspace) {
         fail("Missing parameter 'workspace'! E.g. --workspace=~/myworkspace");
     }
+    if (!configFile) {
+        fail("Missing parameter 'config'! E.g. --config=config.json");
+    }
 
-    const config = readJsonFile("config.json");
+    const config = readJsonFile(configFile);
 
     const usersData = readJsonFile(path.join(workspace, `users_with_decoded_attributes.json`))
     const users = new BunchOfAccounts(usersData);
@@ -22,17 +26,13 @@ async function main(args) {
     const contractsData = readJsonFile(path.join(workspace, `contracts_with_decoded_attributes.json`));
     const contracts = new BunchOfAccounts(contractsData);
 
-    const farmsSummaryData = readJsonFile(path.join(workspace, `farms_summary.json`));
-    const farmsSummary = new FarmsSummary(farmsSummaryData);
-
-    const poolsSummaryData = readJsonFile(path.join(workspace, `pools_summary.json`));
-    const poolsSummary = new PoolsSummary(poolsSummaryData);
+    const contractsSummaryData = readJsonFile(path.join(workspace, `contracts_summary.json`));
+    const contractsSummary = new ContractsSummary(contractsSummaryData);
 
     const context = {
         contracts: contracts,
-        farmsSummary: farmsSummary,
-        poolsSummary: poolsSummary
-    }
+        contractsSummary: contractsSummary
+    };
 
     for (const account of users.data) {
         await unwrapTokens(context, account.tokens, config.tokensMetadata);
@@ -46,6 +46,10 @@ async function unwrapTokens(context, tokens, tokensMetadata) {
     for (const token of tokens) {
         const metadata = tokensMetadata[token.name];
 
+        if (!metadata) {
+            throw new Error(`missing metadata for token: ${token.name}`);
+        }
+
         if (metadata.isMetastakingToken) {
             token.unwrapped = await unwrapMetastakingToken(context, 0, token);
         } else if (metadata.isStakingToken) {
@@ -58,6 +62,8 @@ async function unwrapTokens(context, tokens, tokensMetadata) {
             token.unwrapped = {
                 recovered: token.balance
             };
+        } else if (metadata.isHatomMoneyMarketToken) {
+            token.unwrapped = await unwrapHatomMoneyMarketToken(context, 0, token);
         } else {
             throw new Error(`unknown token: ${token.name}`);
         }
@@ -75,10 +81,10 @@ async function unwrapTokens(context, tokens, tokensMetadata) {
 async function unwrapMetastakingToken(context, indentation, metastakingToken) {
     console.log(indent(indentation), "unwrapMetastakingToken()", metastakingToken.name, metastakingToken.nonce);
 
-    const metastakingFarmSummary = context.farmsSummary.getMetastakingFarmByTokenName(metastakingToken.name);
-    const stakingFarmSummary = context.farmsSummary.getFarmByTokenName(metastakingFarmSummary.farmTokenId);
-    const lpFarmSummary = context.farmsSummary.getFarmByTokenName(metastakingFarmSummary.lpFarmTokenId);
-    const poolSummary = context.poolsSummary.getPoolByTokenName(metastakingFarmSummary.lpTokenId);
+    const metastakingFarmSummary = context.contractsSummary.getMetastakingFarmByTokenName(metastakingToken.name);
+    const stakingFarmSummary = context.contractsSummary.getFarmByTokenName(metastakingFarmSummary.farmTokenId);
+    const lpFarmSummary = context.contractsSummary.getFarmByTokenName(metastakingFarmSummary.lpFarmTokenId);
+    const poolSummary = context.contractsSummary.getPoolByTokenName(metastakingFarmSummary.lpTokenId);
 
     const metastakingTokenAttributes = metastakingToken.decodedAttributes;
 
@@ -133,7 +139,7 @@ async function unwrapMetastakingToken(context, indentation, metastakingToken) {
 async function unwrapStakingToken(context, indentation, stakingToken) {
     console.log(indent(indentation), "unwrapStakingToken()", stakingToken.name, stakingToken.nonce);
 
-    const stakingFarmSummary = context.farmsSummary.getFarmByTokenName(stakingToken.name);
+    const stakingFarmSummary = context.contractsSummary.getFarmByTokenName(stakingToken.name);
     const stakingFarmTokenAttributes = stakingToken.decodedAttributes;
     const tokenType = stakingFarmTokenAttributes.type;
 
@@ -160,7 +166,7 @@ async function unwrapStakingToken(context, indentation, stakingToken) {
 async function unwrapLpToken(context, indentation, lpToken) {
     console.log(indent(indentation), "unwrapLpToken()", lpToken.name, lpToken.nonce);
 
-    const poolSummary = context.poolsSummary.getPoolByTokenName(lpToken.name);
+    const poolSummary = context.contractsSummary.getPoolByTokenName(lpToken.name);
 
     // We will simulate a "remove_liquidity":
     const lpFirstTokenAmountRecovered = new BigNumber(lpToken.balance).multipliedBy(poolSummary.reserveFirstToken).dividedBy(poolSummary.lpTokenSupply);
@@ -174,8 +180,8 @@ async function unwrapLpToken(context, indentation, lpToken) {
 async function unwrapLpFarmToken(context, indentation, lpFarmToken) {
     console.log(indent(indentation), "unwrapLpFarmToken()", lpFarmToken.name, lpFarmToken.nonce);
 
-    const farmSummary = context.farmsSummary.getFarmByTokenName(lpFarmToken.name);
-    const poolSummary = context.poolsSummary.getPoolByTokenName(farmSummary.farmingTokenId);
+    const farmSummary = context.contractsSummary.getFarmByTokenName(lpFarmToken.name);
+    const poolSummary = context.contractsSummary.getPoolByTokenName(farmSummary.farmingTokenId);
 
     // We will simulate a "remove_liquidity":
     const lpFirstTokenAmountRecovered = new BigNumber(lpFarmToken.balance).multipliedBy(poolSummary.reserveFirstToken).dividedBy(poolSummary.lpTokenSupply);
@@ -183,6 +189,19 @@ async function unwrapLpFarmToken(context, indentation, lpFarmToken) {
     return {
         lpFirstTokenAmountRecovered: lpFirstTokenAmountRecovered.toFixed(),
         recovered: lpFirstTokenAmountRecovered.toFixed()
+    };
+}
+
+async function unwrapHatomMoneyMarketToken(context, indentation, hatomToken) {
+    console.log("unwrapHatomMoneyMarketToken()", hatomToken.name, hatomToken.nonce);
+
+    const marketSummary = context.contractsSummary.getHatomMoneyMarketByTokenName(hatomToken.name);
+    const liquidity = new BigNumber(marketSummary.liquidity);
+    const totalSupply = new BigNumber(marketSummary.totalSupply);
+    const underlyingAmount = liquidity.multipliedBy(hatomToken.balance).dividedBy(totalSupply);
+
+    return {
+        recovered: underlyingAmount.toFixed()
     };
 }
 

@@ -143,7 +143,8 @@ async function createHatomMoneyMarketsSummary(contractStateProvider, config) {
             totalBorrows: totalBorrows.toFixed(),
             totalReserves: totalReserves.toFixed(),
             liquidity: liquidity.toFixed(),
-            exchangeRate: exchangeRate.toFixed()
+            exchangeRate: exchangeRate.toFixed(),
+            wad: wad.toFixed()
         };
     }
 
