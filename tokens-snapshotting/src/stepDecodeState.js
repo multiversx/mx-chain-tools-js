@@ -6,33 +6,36 @@ const { FilesystemContractStateProvider } = require("./contractStateProviders");
 const { bufferToBigInt } = require("@multiversx/sdk-core/out/smartcontracts/codec/utils");
 const { Address } = require("@multiversx/sdk-core");
 const dex = require("@multiversx/sdk-exchange");
+const { default: BigNumber } = require("bignumber.js");
 
 const STAKING_UNBOND_ATTRIBUTES_LEN = 12;
 
 async function main(args) {
     const parsedArgs = minimist(args);
     const workspace = asUserPath(parsedArgs.workspace);
+    const configFile = parsedArgs.config;
 
     if (!workspace) {
         fail("Missing parameter 'workspace'! E.g. --workspace=~/myworkspace");
     }
+    if (!configFile) {
+        fail("Missing parameter 'config'! E.g. --config=config.json");
+    }
 
     console.log("Workspace:", workspace);
+    console.log("Config file:", configFile);
 
-    const config = readJsonFile("config.json");
+    const config = readJsonFile(configFile);
     const contractStateProvider = new FilesystemContractStateProvider(workspace);
 
     writeJsonFile(
-        path.join(workspace, `farms_summary.json`),
+        path.join(workspace, `contracts_summary.json`),
         {
             farms: await createFarmsSummary(contractStateProvider, config),
-            metastakingFarms: await createMetastakingSummary(contractStateProvider, config)
+            metastakingFarms: await createMetastakingSummary(contractStateProvider, config),
+            pools: await createPoolsSummary(contractStateProvider, config),
+            hatomMoneyMarkets: await createHatomMoneyMarketsSummary(contractStateProvider, config)
         }
-    );
-
-    writeJsonFile(
-        path.join(workspace, `pools_summary.json`),
-        await createPoolsSummary(contractStateProvider, config)
     );
 
     decodeAttributesInFile(
@@ -114,6 +117,34 @@ async function createPoolsSummary(contractStateProvider, config) {
             reserveFirstToken: reserveFirstToken.toFixed(),
             reserveSecondToken: reserveSecondToken.toFixed()
         }
+    }
+
+    return result;
+}
+
+async function createHatomMoneyMarketsSummary(contractStateProvider, config) {
+    const result = {};
+
+    for (const item of config.hatomMoneyMarkets) {
+        const state = await contractStateProvider.getState(item);
+
+        const totalSupply = bufferToBigInt(Buffer.from(state[Buffer.from("total_supply").toString("hex")], "hex"));
+        const cash = bufferToBigInt(Buffer.from(state[Buffer.from("cash").toString("hex")], "hex"));
+        const totalBorrows = bufferToBigInt(Buffer.from(state[Buffer.from("total_borrows").toString("hex")], "hex"));
+        const totalReserves = bufferToBigInt(Buffer.from(state[Buffer.from("total_reserves").toString("hex")], "hex"));
+        const wad = new BigNumber("1000000000000000000");
+
+        const liquidity = cash.plus(totalBorrows).minus(totalReserves);
+        const exchangeRate = liquidity.dividedBy(totalSupply).times(wad);
+
+        result[item.token] = {
+            totalSupply: totalSupply.toFixed(),
+            cash: cash.toFixed(),
+            totalBorrows: totalBorrows.toFixed(),
+            totalReserves: totalReserves.toFixed(),
+            liquidity: liquidity.toFixed(),
+            exchangeRate: exchangeRate.toFixed()
+        };
     }
 
     return result;

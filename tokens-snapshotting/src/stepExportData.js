@@ -12,6 +12,7 @@ async function main() {
     const workspace = asUserPath(argv.workspace);
     const round = parseInt(argv.round);
     const gatewayUrl = argv.gateway;
+    const configFile = argv.config;
 
     if (!workspace) {
         fail("Missing parameter 'workspace'! E.g. --workspace=~/myworkspace");
@@ -22,12 +23,15 @@ async function main() {
     if (!gatewayUrl) {
         fail("Missing parameter 'gateway'! E.g. --gateway=https://gateway.multiversx.com");
     }
+    if (!configFile) {
+        fail("Missing parameter 'config'! E.g. --config=config.json");
+    }
 
     console.log("Workspace:", workspace);
     console.log("Round:", round);
     console.log("Gateway URL:", gatewayUrl);
 
-    const config = readJsonFile("config.json");
+    const config = readJsonFile(configFile);
     const networkProvider = new NetworkProvider(gatewayUrl);
 
     const blockInfoByShard = await networkProvider.getBlockInfoInRoundByShard(round);
@@ -38,7 +42,7 @@ async function main() {
 
     console.log("blockInfoByShard", blockInfoByShard);
 
-    // Extract blockchain state from the deep - history archives.
+    // Extract blockchain state from the deep-history archives.
     for (const shard of SHARDS) {
         const dbDir = path.join(workspace, `shard-${shard}`, "db-for-exporter");
 
@@ -110,16 +114,22 @@ async function main() {
     writeJsonFile(path.join(workspace, "users.json"), usersAllShards);
     writeJsonFile(path.join(workspace, "contracts.json"), contractsAllShards);
 
-    const contracts = [].concat(config.pools).concat(config.farms).concat(config.metastakingFarms);
+    const contracts = []
+        .concat(config.pools)
+        .concat(config.farms)
+        .concat(config.metastakingFarms)
+        .concat(config.hatomMoneyMarkets);
 
     for (const contract of contracts) {
+        // TODO: Fix hardcoded shard = 1 (DEX contracts are in shard 1).
         const dbDir = path.join(workspace, `shard-1`, "db-for-exporter");
+        const outfile = path.join(workspace, contract.stateFilename);
 
         exportAccountState({
             dbDir: dbDir,
             address: contract.address,
             rootHash: blockInfoByShard[1].rootHash,
-            outfile: path.join(workspace, contract.stateFilename)
+            outfile: outfile
         });
     }
 }

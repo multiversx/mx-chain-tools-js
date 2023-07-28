@@ -8,7 +8,8 @@
         "SUTK-ba35f3",
         "METAUTK-291e0e",
         "METAUTKLK-e6a445",
-        "METAUTKLK-112f52"
+        "METAUTKLK-112f52",
+        "HUTK-4fa4b2"
     ],
     "tokensMetadata": {
         "UTK-2f80e9": {
@@ -86,6 +87,13 @@
             "token": "UTKWEGLD-c960d1",
             "address": "erd1qqqqqqqqqqqqqpgq0lzzvt2faev4upyf586tg38s84d7zsaj2jpsglugga",
             "stateFilename": "state_pool_UTKWEGLD-c960d1.json"
+        }
+    ],
+    "hatomMoneyMarkets": [
+        {
+            "token": "HUTK-4fa4b2",
+            "address": "erd1qqqqqqqqqqqqqpgqta0tv8d5pjzmwzshrtw62n4nww9kxtl278ssspxpxu",
+            "stateFilename": "hatom_HUTK-4fa4b2.json"
         }
     ]
 }

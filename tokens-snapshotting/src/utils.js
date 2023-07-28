@@ -30,7 +30,7 @@ class BunchOfAccounts {
     }
 }
 
-class FarmsSummary {
+class ContractsSummary {
     constructor(data) {
         this.data = data;
     }
@@ -52,17 +52,20 @@ class FarmsSummary {
 
         return metadata;
     }
-}
-
-class PoolsSummary {
-    constructor(data) {
-        this.data = data;
-    }
 
     getPoolByTokenName(tokenName) {
-        const metadata = this.data[tokenName];
+        const metadata = this.data.pools[tokenName];
         if (!metadata) {
             throw new Error(`cannot get metadata for pool: ${tokenName}`);
+        }
+
+        return metadata;
+    }
+
+    getHatomMoneyMarketByTokenName(tokenName) {
+        const metadata = this.data.hatomMoneyMarkets[tokenName];
+        if (!metadata) {
+            throw new Error(`cannot get metadata for hatom contract: ${tokenName}`);
         }
 
         return metadata;
@@ -75,7 +78,6 @@ function formatAmount(amount, numDecimals) {
 
 module.exports = {
     BunchOfAccounts,
-    FarmsSummary,
-    PoolsSummary,
+    ContractsSummary,
     formatAmount
 };
