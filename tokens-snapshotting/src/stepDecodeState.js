@@ -39,14 +39,8 @@ async function main(args) {
     );
 
     decodeAttributesInFile(
-        path.join(workspace, `users.json`),
-        path.join(workspace, `users_with_decoded_attributes.json`),
-        config.tokensMetadata
-    );
-
-    decodeAttributesInFile(
-        path.join(workspace, `contracts.json`),
-        path.join(workspace, `contracts_with_decoded_attributes.json`),
+        path.join(workspace, `accounts.json`),
+        path.join(workspace, `accounts_with_decoded_attributes.json`),
         config.tokensMetadata
     );
 }

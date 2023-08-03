@@ -57,8 +57,7 @@ async function main() {
         extractTrie(path.join(dbDir, "0"), epochBeforeArchive, epochBefore, shard);
     }
 
-    const usersAllShards = [];
-    const contractsAllShards = [];
+    const accountsAllShards = [];
 
     for (const shard of SHARDS) {
         const dbDir = path.join(workspace, `shard-${shard}`, "db-for-exporter");
@@ -73,7 +72,7 @@ async function main() {
             contractsOutfile,
         });
 
-        usersAllShards.push(...(readJsonFile(usersOutfile).accounts).map(item => {
+        accountsAllShards.push(...(readJsonFile(usersOutfile).accounts).map(item => {
             return {
                 shard: shard,
                 address: item.address,
@@ -81,7 +80,7 @@ async function main() {
             }
         }));
 
-        contractsAllShards.push(...(readJsonFile(contractsOutfile).accounts).map(item => {
+        accountsAllShards.push(...(readJsonFile(contractsOutfile).accounts).map(item => {
             return {
                 shard: shard,
                 address: item.address,
@@ -90,7 +89,7 @@ async function main() {
         }));
     }
 
-    usersAllShards.sort((a, b) => {
+    accountsAllShards.sort((a, b) => {
         if (a.address < b.address) {
             return -1;
         }
@@ -100,19 +99,8 @@ async function main() {
         return 0;
     });
 
-    contractsAllShards.sort((a, b) => {
-        if (a.address < b.address) {
-            return -1;
-        }
-        if (a.address > b.address) {
-            return 1;
-        }
-        return 0;
-    });
-
-    // Save concatenated users and contracts.
-    writeJsonFile(path.join(workspace, "users.json"), usersAllShards);
-    writeJsonFile(path.join(workspace, "contracts.json"), contractsAllShards);
+    // Save concatenated accounts.
+    writeJsonFile(path.join(workspace, "accounts.json"), accountsAllShards);
 
     const contracts = []
         .concat(config.pools)
