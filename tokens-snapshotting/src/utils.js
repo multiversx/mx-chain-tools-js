@@ -4,9 +4,12 @@ class BunchOfAccounts {
     constructor(data) {
         this.data = data;
 
+        this.indexAccountByAddress = {};
         this.indexTokenByAddressAndNameAndNonce = {};
 
         for (const account of data) {
+            this.indexAccountByAddress[account.address] = account;
+
             for (const token of account.tokens) {
                 const key = this.createIndexKeyByAddressAndNameAndNonce(account.address, token.name, token.nonce);
                 this.indexTokenByAddressAndNameAndNonce[key] = token;
@@ -27,6 +30,20 @@ class BunchOfAccounts {
         }
 
         return token;
+    }
+
+    getAllAccounts() {
+        return this.data;
+    }
+
+    getAccount(address) {
+        const account = this.indexAccountByAddress[address];
+
+        if (!account) {
+            throw new Error(`cannot find account by address: ${address}`);
+        }
+
+        return account;
     }
 }
 

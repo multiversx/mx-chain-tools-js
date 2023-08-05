@@ -3,6 +3,7 @@ const path = require("path");
 const child_process = require("child_process");
 const minimist = require("minimist");
 const { asUserPath, readJsonFile, writeJsonFile } = require("./filesystem");
+const { Config } = require("./config");
 const { NetworkProvider } = require("./networkProvider");
 
 const SHARDS = [0, 1, 2];
@@ -31,7 +32,7 @@ async function main() {
     console.log("Round:", round);
     console.log("Gateway URL:", gatewayUrl);
 
-    const config = readJsonFile(configFile);
+    const config = Config.load(configFile);
     const networkProvider = new NetworkProvider(gatewayUrl);
 
     const blockInfoByShard = await networkProvider.getBlockInfoInRoundByShard(round);
@@ -57,7 +58,7 @@ async function main() {
         extractTrie(path.join(dbDir, "0"), epochBeforeArchive, epochBefore, shard);
     }
 
-    const accountsAllShards = [];
+    const allAccounts = [];
 
     for (const shard of SHARDS) {
         const dbDir = path.join(workspace, `shard-${shard}`, "db-for-exporter");
@@ -72,24 +73,11 @@ async function main() {
             contractsOutfile,
         });
 
-        accountsAllShards.push(...(readJsonFile(usersOutfile).accounts).map(item => {
-            return {
-                shard: shard,
-                address: item.address,
-                tokens: item.tokens
-            }
-        }));
-
-        accountsAllShards.push(...(readJsonFile(contractsOutfile).accounts).map(item => {
-            return {
-                shard: shard,
-                address: item.address,
-                tokens: item.tokens
-            }
-        }));
+        allAccounts.push(...(readJsonFile(usersOutfile).accounts));
+        allAccounts.push(...(readJsonFile(contractsOutfile).accounts));
     }
 
-    accountsAllShards.sort((a, b) => {
+    allAccounts.sort((a, b) => {
         if (a.address < b.address) {
             return -1;
         }
@@ -99,8 +87,20 @@ async function main() {
         return 0;
     });
 
+    const allAccountsOutput = allAccounts.map(item => {
+        const holder = item.address;
+        const holderTag = config.getTagOfAddress(holder);
+        const tokens = item.tokens.map(token => { return { holder, holderTag, ...token } });
+
+        return {
+            address: holder,
+            addressTag: holderTag,
+            tokens: tokens
+        }
+    });
+
     // Save concatenated accounts.
-    writeJsonFile(path.join(workspace, "accounts.json"), accountsAllShards);
+    writeJsonFile(path.join(workspace, "accounts.json"), allAccountsOutput);
 
     const contracts = []
         .concat(config.pools)

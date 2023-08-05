@@ -2,7 +2,10 @@ const path = require("path");
 const { BigNumber } = require("bignumber.js");
 const { asUserPath, readJsonFile, writeJsonFile } = require("./filesystem");
 const { BunchOfAccounts, ContractsSummary, formatAmount } = require("./utils.js");
+const { Address } = require("@multiversx/sdk-core");
 const minimist = require("minimist");
+const { Config } = require("./config.js");
+const { Checkpoints } = require("./checkpoints.js");
 
 BigNumber.config({ DECIMAL_PLACES: 128 });
 
@@ -18,37 +21,70 @@ async function main(args) {
         fail("Missing parameter 'config'! E.g. --config=config.json");
     }
 
-    const config = readJsonFile(configFile);
+    const config = Config.load(configFile);
 
-    const usersData = readJsonFile(path.join(workspace, `users_with_decoded_attributes.json`))
-    const users = new BunchOfAccounts(usersData);
-
-    const contractsData = readJsonFile(path.join(workspace, `contracts_with_decoded_attributes.json`));
-    const contracts = new BunchOfAccounts(contractsData);
+    const accountsData = readJsonFile(path.join(workspace, `accounts_with_decoded_attributes.json`))
+    const accounts = new BunchOfAccounts(accountsData);
+    const checkpoints = new Checkpoints();
 
     const contractsSummaryData = readJsonFile(path.join(workspace, `contracts_summary.json`));
     const contractsSummary = new ContractsSummary(contractsSummaryData);
 
-    const context = {
-        contracts: contracts,
-        contractsSummary: contractsSummary
-    };
+    for (const account of accounts.data) {
+        const isKnownContract = config.isKnownContractAddress(account.address);
+        if (isKnownContract) {
+            continue;
+        }
 
-    for (const account of users.data) {
-        await unwrapTokens(context, account.tokens, config.tokensMetadata);
+        if (new Address(account.address).isContractAddress()) {
+            checkpoints.accumulate("numContracts", 1);
+        } else {
+            checkpoints.accumulate("numUsers", 1);
+        }
+
+        checkpoints.accumulate("numAccounts", 1);
+
+        const context = {
+            checkpoints: checkpoints,
+            accountOnFocus: account,
+            accounts: accounts,
+            contractsSummary: contractsSummary
+        };
+
+        await unwrapTokens(context, config);
     }
 
-    const outputPath = path.join(workspace, `users_with_unwrapped_tokens.json`);
-    writeJsonFile(outputPath, users.data);
+    const outputPath = path.join(workspace, `accounts_with_unwrapped_tokens.json`);
+    writeJsonFile(outputPath, accounts.data);
+
+    console.log(JSON.stringify(checkpoints, null, 4));
+
+    const total = new BigNumber(checkpoints.$foundBaseToken)
+        .plus(checkpoints.$recoveredFromStakingFarm)
+        .plus(checkpoints.$recoveredStakingFarmRewards)
+        .plus(checkpoints.$recoveredFromLpViaMetastaking)
+        .plus(checkpoints.$recoveredStakingFarmRewardsViaMetastaking)
+        .plus(checkpoints.$recoveredFromHatomMoneyMarket)
+        .plus(checkpoints.$recoveredFromLpViaFarm)
+        .plus(checkpoints.$recoveredFromLp);
+
+    const totalFromLp = new BigNumber(0)
+        .plus(checkpoints.$recoveredFromLpViaFarm)
+        .plus(checkpoints.$recoveredFromLp)
+        .plus(checkpoints.$recoveredFromLpViaMetastaking);
+
+    console.log("Total token:", total.toFixed(0));
+    console.log("Total token (formatted):", new BigNumber(formatAmount(total, 18)).toFormat());
+
+    console.log("Total from LP", totalFromLp.toFixed(0));
+    console.log("Total from LP (formatted):", new BigNumber(formatAmount(totalFromLp, 18)).toFormat());
 }
 
-async function unwrapTokens(context, tokens, tokensMetadata) {
-    for (const token of tokens) {
-        const metadata = tokensMetadata[token.name];
+async function unwrapTokens(context, config) {
+    const tokens = context.accountOnFocus.tokens
 
-        if (!metadata) {
-            throw new Error(`missing metadata for token: ${token.name}`);
-        }
+    for (const token of tokens) {
+        const metadata = config.getTokenMetadata(token.name);
 
         if (metadata.isMetastakingToken) {
             token.unwrapped = await unwrapMetastakingToken(context, 0, token);
@@ -59,23 +95,29 @@ async function unwrapTokens(context, tokens, tokensMetadata) {
         } else if (metadata.isFarmToken) {
             token.unwrapped = await unwrapLpFarmToken(context, 0, token);
         } else if (metadata.isBaseToken) {
-            token.unwrapped = {
-                recovered: token.balance
-            };
+            token.unwrapped = await unwrapBaseToken(context, 0, token);
         } else if (metadata.isHatomMoneyMarketToken) {
             token.unwrapped = await unwrapHatomMoneyMarketToken(context, 0, token);
         } else {
             throw new Error(`unknown token: ${token.name}`);
         }
 
-        if (token?.unwrapped?.recovered) {
+        if (token.unwrapped.recovered) {
             token.unwrapped.recoveredFormatted = formatAmount(token.unwrapped.recovered, 18);
         }
 
-        if (token?.unwrapped?.rewards) {
+        if (token.unwrapped.rewards) {
             token.unwrapped.rewardsFormatted = formatAmount(token.unwrapped.rewards, 18);
         }
     }
+}
+
+async function unwrapBaseToken(context, indentation, baseToken) {
+    context.checkpoints.accumulate("$foundBaseToken", baseToken.balance);
+
+    return {
+        recovered: baseToken.balance
+    };
 }
 
 async function unwrapMetastakingToken(context, indentation, metastakingToken) {
@@ -89,8 +131,8 @@ async function unwrapMetastakingToken(context, indentation, metastakingToken) {
     const metastakingTokenAttributes = metastakingToken.decodedAttributes;
 
     // Staking token and LP farm token (positions) are held by the metastaking farm contract.
-    const stakingFarmToken = context.contracts.getTokenByAddressAndNameAndNonce(metastakingFarmSummary.contractAddress, metastakingFarmSummary.farmTokenId, metastakingTokenAttributes.stakingFarmTokenNonce);
-    const lpFarmToken = context.contracts.getTokenByAddressAndNameAndNonce(metastakingFarmSummary.contractAddress, metastakingFarmSummary.lpFarmTokenId, metastakingTokenAttributes.lpFarmTokenNonce);
+    const stakingFarmToken = context.accounts.getTokenByAddressAndNameAndNonce(metastakingFarmSummary.contractAddress, metastakingFarmSummary.farmTokenId, metastakingTokenAttributes.stakingFarmTokenNonce);
+    const lpFarmToken = context.accounts.getTokenByAddressAndNameAndNonce(metastakingFarmSummary.contractAddress, metastakingFarmSummary.lpFarmTokenId, metastakingTokenAttributes.lpFarmTokenNonce);
 
     const stakingFarmTokenAttributes = stakingFarmToken.decodedAttributes;
     const lpFarmTokenAttributes = lpFarmToken.decodedAttributes;
@@ -109,9 +151,6 @@ async function unwrapMetastakingToken(context, indentation, metastakingToken) {
     const fractionaryStakingFarmTokenAmount = fraction.multipliedBy(new BigNumber(stakingFarmToken.balance))
     const fractionaryLpFarmTokenAmount = fraction.multipliedBy(new BigNumber(lpFarmToken.balance))
 
-    console.log(indent(indentation + 1), "fractionaryStakingFarmTokenAmount", fractionaryStakingFarmTokenAmount.toFixed());
-    console.log(indent(indentation + 1), "fractionaryLpFarmTokenAmount", fractionaryLpFarmTokenAmount.toFixed());
-
     const stakingFarmRewards = new BigNumber(stakingFarmSummary.rewardPerShare).minus(stakingFarmTokenAttributes.rewardPerShare)
         .multipliedBy(fractionaryStakingFarmTokenAmount)
         .dividedBy(stakingFarmSummary.divisionSafetyNumber);
@@ -120,20 +159,21 @@ async function unwrapMetastakingToken(context, indentation, metastakingToken) {
         .multipliedBy(fractionaryLpFarmTokenAmount)
         .dividedBy(lpFarmSummary.divisionSafetyNumber);
 
-    console.log(indent(indentation + 1), "stakingFarmRewards", stakingFarmRewards.toFixed());
-    console.log(indent(indentation + 1), "lpFarmFarmedAmount", lpFarmFarmedAmount.toFixed());
-
     // We will simulate a "remove_liquidity":
     const lpFirstTokenAmountRecovered = fractionaryLpFarmTokenAmount.multipliedBy(poolSummary.reserveFirstToken).dividedBy(poolSummary.lpTokenSupply);
 
-    console.log(indent(indentation + 1), "lpFirstTokenAmountRecovered", lpFirstTokenAmountRecovered.toFixed());
+    stakingFarmToken.touched = true;
+    lpFarmToken.touched = true;
+
+    context.checkpoints.accumulate("$recoveredFromLpViaMetastaking", lpFirstTokenAmountRecovered);
+    context.checkpoints.accumulate("$recoveredStakingFarmRewardsViaMetastaking", stakingFarmRewards);
 
     return {
         fractionaryLpFarmTokenAmount: fractionaryLpFarmTokenAmount.toFixed(),
         lpFirstTokenAmountRecovered: lpFirstTokenAmountRecovered.toFixed(),
         recovered: lpFirstTokenAmountRecovered.toFixed(),
         rewards: stakingFarmRewards.toFixed()
-    }
+    };
 }
 
 async function unwrapStakingToken(context, indentation, stakingToken) {
@@ -142,10 +182,13 @@ async function unwrapStakingToken(context, indentation, stakingToken) {
     const stakingFarmSummary = context.contractsSummary.getFarmByTokenName(stakingToken.name);
     const stakingFarmTokenAttributes = stakingToken.decodedAttributes;
     const tokenType = stakingFarmTokenAttributes.type;
+    const recoveredBalance = stakingToken.balance;
+
+    context.checkpoints.accumulate("$recoveredFromStakingFarm", recoveredBalance);
 
     if (tokenType == "unboundFarmToken") {
         return {
-            recovered: stakingToken.balance,
+            recovered: recoveredBalance,
         };
     }
 
@@ -154,8 +197,10 @@ async function unwrapStakingToken(context, indentation, stakingToken) {
             .multipliedBy(stakingToken.balance)
             .dividedBy(stakingFarmSummary.divisionSafetyNumber);
 
+        context.checkpoints.accumulate("$recoveredStakingFarmRewards", rewards);
+
         return {
-            recovered: stakingToken.balance,
+            recovered: recoveredBalance,
             rewards: rewards.toFixed()
         };
     }
@@ -169,7 +214,11 @@ async function unwrapLpToken(context, indentation, lpToken) {
     const poolSummary = context.contractsSummary.getPoolByTokenName(lpToken.name);
 
     // We will simulate a "remove_liquidity":
-    const lpFirstTokenAmountRecovered = new BigNumber(lpToken.balance).multipliedBy(poolSummary.reserveFirstToken).dividedBy(poolSummary.lpTokenSupply);
+    const lpFirstTokenAmountRecovered = new BigNumber(lpToken.balance)
+        .multipliedBy(poolSummary.reserveFirstToken)
+        .dividedBy(poolSummary.lpTokenSupply);
+
+    context.checkpoints.accumulate("$recoveredFromLp", lpFirstTokenAmountRecovered);
 
     return {
         lpFirstTokenAmountRecovered: lpFirstTokenAmountRecovered.toFixed(),
@@ -186,6 +235,8 @@ async function unwrapLpFarmToken(context, indentation, lpFarmToken) {
     // We will simulate a "remove_liquidity":
     const lpFirstTokenAmountRecovered = new BigNumber(lpFarmToken.balance).multipliedBy(poolSummary.reserveFirstToken).dividedBy(poolSummary.lpTokenSupply);
 
+    context.checkpoints.accumulate("$recoveredFromLpViaFarm", lpFirstTokenAmountRecovered);
+
     return {
         lpFirstTokenAmountRecovered: lpFirstTokenAmountRecovered.toFixed(),
         recovered: lpFirstTokenAmountRecovered.toFixed()
@@ -193,12 +244,14 @@ async function unwrapLpFarmToken(context, indentation, lpFarmToken) {
 }
 
 async function unwrapHatomMoneyMarketToken(context, indentation, hatomToken) {
-    console.log("unwrapHatomMoneyMarketToken()", hatomToken.name, hatomToken.nonce);
+    console.log(indent(indentation), "unwrapHatomMoneyMarketToken()", hatomToken.name, hatomToken.nonce);
 
     const marketSummary = context.contractsSummary.getHatomMoneyMarketByTokenName(hatomToken.name);
     const liquidity = new BigNumber(marketSummary.liquidity);
     const totalSupply = new BigNumber(marketSummary.totalSupply);
     const underlyingAmount = liquidity.multipliedBy(hatomToken.balance).dividedBy(totalSupply);
+
+    context.checkpoints.accumulate("$recoveredFromHatomMoneyMarket", underlyingAmount);
 
     return {
         recovered: underlyingAmount.toFixed()

@@ -94,7 +94,7 @@ export ROUND=15678680
 export GATEWAY=https://gateway.multiversx.com
 export CONFIG=./config/mainnet-utk-v0.1.0.config.json
 
-node ./stepExportData.js --workspace=${WORKSPACE} --round=${ROUND} --gateway=${GATEWAY} --config=${CONFIG}
+node ./src/stepExportData.js --workspace=${WORKSPACE} --round=${ROUND} --gateway=${GATEWAY} --config=${CONFIG}
 ```
 
 Under the hood, the script un-tars the archives, then extracts the data using the tools mentioned above (`tokensExporter` and `accountStorageExporter`). The extraction is guided by the provided configuration file.
@@ -104,9 +104,9 @@ Under the hood, the script un-tars the archives, then extracts the data using th
 ```
 export WORKSPACE=~/utk
 
-node ./stepDecodeState.js --workspace=${WORKSPACE} --config=${CONFIG}
-node ./stepUnwrapTokens.js --workspace=${WORKSPACE} --config=${CONFIG}
-node ./stepReport.js --workspace=${WORKSPACE} --config=${CONFIG} --outfile=ranking.txt
+node ./src/stepDecodeState.js --workspace=${WORKSPACE} --config=${CONFIG}
+node ./src/stepUnwrapTokens.js --workspace=${WORKSPACE} --config=${CONFIG}
+node ./src/stepReport.js --workspace=${WORKSPACE} --config=${CONFIG} --tag=example
 ```
 
 ## Make a single-address snapshot (on-line approach)

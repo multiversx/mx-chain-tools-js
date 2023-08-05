@@ -4,11 +4,14 @@ const minimist = require("minimist");
 const { asUserPath, readJsonFile, writeJsonFile } = require("./filesystem");
 const { FilesystemContractStateProvider } = require("./contractStateProviders");
 const { bufferToBigInt } = require("@multiversx/sdk-core/out/smartcontracts/codec/utils");
+const { BinaryCodec } = require("@multiversx/sdk-core/out/smartcontracts");
+const { StringValue } = require("@multiversx/sdk-core/out/smartcontracts");
 const { Address } = require("@multiversx/sdk-core");
 const dex = require("@multiversx/sdk-exchange");
 const { default: BigNumber } = require("bignumber.js");
 
 const STAKING_UNBOND_ATTRIBUTES_LEN = 12;
+const codec = new BinaryCodec();
 
 async function main(args) {
     const parsedArgs = minimist(args);
@@ -54,17 +57,42 @@ async function createFarmsSummary(contractStateProvider, config) {
         const rewardPerShareBytes = Buffer.from(state[Buffer.from("reward_per_share").toString("hex")], "hex");
         const rewardPerShare = bufferToBigInt(rewardPerShareBytes);
 
-        const divisionSafetyNumberBytes = Buffer.from(state[Buffer.from("division_safety_constant").toString("hex")], "hex");
+        const divisionSafetyNumberBytes = Buffer.from(state[Buffer.from("division_safety_constant").toString("hex")] || "", "hex");
         const divisionSafetyNumber = bufferToBigInt(divisionSafetyNumberBytes);
+
+        const accumulatedRewardsBytes = Buffer.from(state[Buffer.from("accumulatedRewards").toString("hex")] || "", "hex");
+        const accumulatedRewards = bufferToBigInt(accumulatedRewardsBytes);
+
+        const farmTokenSupplyBytes = Buffer.from(state[Buffer.from("farm_token_supply").toString("hex")] || "", "hex");
+        const farmTokenSupply = bufferToBigInt(farmTokenSupplyBytes);
+
+        const rewardCapacityBytes = Buffer.from(state[Buffer.from("reward_capacity").toString("hex")] || "", "hex");
+        const rewardCapacity = bufferToBigInt(rewardCapacityBytes);
+
+        const rewardReserveBytes = Buffer.from(state[Buffer.from("reward_reserve").toString("hex")] || "", "hex");
+        const rewardReserve = bufferToBigInt(rewardReserveBytes);
+
+        const rewardTokenId = getString(state, "reward_token_id");
+        const farmTokenId = getString(state, "farm_token_id");
+        const farmingTokenId = getString(state, "farming_token_id");
+
+        const rewardTokenBalance = getESDTBalance(state, rewardTokenId);
+        const farmingTokenBalance = getESDTBalance(state, farmingTokenId);
 
         result[item.token] = {
             name: item.token,
             contractAddress: item.address,
             rewardPerShare: rewardPerShare.toFixed(),
-            rewardTokenId: Buffer.from(state[Buffer.from("reward_token_id").toString("hex")], "hex").toString(),
-            farmTokenId: Buffer.from(state[Buffer.from("farm_token_id").toString("hex")], "hex").toString(),
-            farmingTokenId: Buffer.from(state[Buffer.from("farming_token_id").toString("hex")], "hex").toString(),
-            divisionSafetyNumber: divisionSafetyNumber
+            rewardTokenId: rewardTokenId,
+            farmTokenId: farmTokenId,
+            farmingTokenId: farmingTokenId,
+            divisionSafetyNumber: divisionSafetyNumber,
+            accumulatedRewards: accumulatedRewards.toFixed(),
+            farmTokenSupply: farmTokenSupply.toFixed(),
+            rewardCapacity: rewardCapacity.toFixed(),
+            rewardReserve: rewardReserve.toFixed(),
+            rewardTokenBalance: rewardTokenBalance.toFixed(),
+            farmingTokenBalance: farmingTokenBalance.toFixed()
         };
     }
 
@@ -101,12 +129,22 @@ async function createPoolsSummary(contractStateProvider, config) {
     for (const item of config.pools) {
         const state = await contractStateProvider.getState(item);
 
-        // TODO: Fix hardcoded values.
-        const lpTokenSupply = bufferToBigInt(Buffer.from(state["6c705f746f6b656e5f737570706c79"], "hex"));
-        const reserveFirstToken = bufferToBigInt(Buffer.from(state["726573657276650000000a55544b2d326638306539"], "hex")); // UTK
-        const reserveSecondToken = bufferToBigInt(Buffer.from(state["726573657276650000000c5745474c442d626434643739"], "hex")); // WEGLD
+        const firstTokenId = getString(state, "first_token_id");
+        const secondTokenId = getString(state, "second_token_id");
+
+        const firstTokenBalance = getESDTBalance(state, firstTokenId);
+        const secondTokenBalance = getESDTBalance(state, secondTokenId);
+
+        const lpTokenSupply = getBigInt(state, "lp_token_supply");
+        const reserveFirstToken = getBigInt(state, Buffer.concat([Buffer.from("reserve"), codec.encodeNested(new StringValue(firstTokenId))]));
+        const reserveSecondToken = getBigInt(state, Buffer.concat([Buffer.from("reserve"), codec.encodeNested(new StringValue(secondTokenId))]));
 
         result[item.token] = {
+            contractAddress: item.address,
+            firstTokenId: firstTokenId,
+            secondTokenId: secondTokenId,
+            firstTokenBalance: firstTokenBalance.toFixed(),
+            secondTokenBalance: secondTokenBalance.toFixed(),
             lpTokenSupply: lpTokenSupply.toFixed(),
             reserveFirstToken: reserveFirstToken.toFixed(),
             reserveSecondToken: reserveSecondToken.toFixed()
@@ -132,6 +170,7 @@ async function createHatomMoneyMarketsSummary(contractStateProvider, config) {
         const exchangeRate = liquidity.dividedBy(totalSupply).times(wad);
 
         result[item.token] = {
+            contractAddress: item.address,
             totalSupply: totalSupply.toFixed(),
             cash: cash.toFixed(),
             totalBorrows: totalBorrows.toFixed(),
@@ -145,6 +184,35 @@ async function createHatomMoneyMarketsSummary(contractStateProvider, config) {
     return result;
 }
 
+function getString(state, key) {
+    const encodedKey = Buffer.from(key).toString("hex");
+    const encodedValue = state[encodedKey];
+    const value = Buffer.from(encodedValue, "hex");
+    return value.toString();
+}
+
+function getESDTBalance(state, tokenId) {
+    const encodedKey = Buffer.from(`ELRONDesdt${tokenId}`).toString("hex");
+    const encodedValue = state[encodedKey] || "";
+    const value = Buffer.from(encodedValue, "hex").subarray(2);
+    return bufferToBigInt(value);
+}
+
+function getBigInt(state, key, defaultValue) {
+    const encodedKey = Buffer.from(key).toString("hex");
+    const encodedValue = state[encodedKey];
+
+    if (encodedValue === undefined) {
+        if (defaultValue !== undefined) {
+            return defaultValue;
+        }
+
+        throw new Error(`cannot find key: [${key}]`);
+    }
+
+    const value = Buffer.from(encodedValue, "hex");
+    return bufferToBigInt(value);
+}
 
 function decodeAttributesInFile(inputFile, outputFile, tokensMetadata) {
     console.log("decodeAttributesInFile()", inputFile);

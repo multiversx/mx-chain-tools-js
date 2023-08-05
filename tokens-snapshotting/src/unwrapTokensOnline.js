@@ -2,7 +2,7 @@ const { NetworkProvider } = require("./networkProvider");
 const { readJsonFile, writeJsonFile, NetworkContractStateProvider } = require("./utils");
 const { createFarmsSummary, createMetastakingSummary, createPoolsSummary, decodeTokensAttributes } = require("./step_decode_state");
 const { unwrapTokens } = require("./step_unwrap_tokens");
-const { computeTotalForUser } = require("./step_report");
+const { computeTotalForAccount } = require("./step_report");
 const { BunchOfAccounts, FarmsSummary, PoolsSummary, formatAmount } = require("./utils.js");
 const diskcache = require("./diskcache");
 const minimist = require("minimist");
@@ -78,7 +78,7 @@ async function main() {
         }
     }
 
-    const total = computeTotalForUser(account);
+    const total = computeTotalForAccount(account);
 
     console.log("=".repeat(80));
     console.log("Total:", formatAmount(total, 18));
