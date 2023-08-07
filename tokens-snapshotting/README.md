@@ -28,13 +28,6 @@ For the general approach, the script invoke, at some point, the following tools:
 
 Thus, make sure to have them built (installed) and available in your `PATH`.
 
-## Published data
-
-Both experimental snapshots and official snapshots are published on Google BigQuery.
-
- - [`snapshots_sandbox`](https://console.cloud.google.com/bigquery?page=dataset&d=snapshots_sandbox&p=multiversx-tokens-snapshots): experimental snapshots
- - [`snapshots`](https://console.cloud.google.com/bigquery?page=dataset&d=snapshots&p=multiversx-tokens-snapshots): official snapshots
-
 ## Glossary
 
  - `base token`: the token for which we are taking the snapshot (e.g. the fungible token `UTK-2f80e9`)

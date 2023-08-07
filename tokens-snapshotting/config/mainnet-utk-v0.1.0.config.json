@@ -92,11 +92,5 @@
             "stateFilename": "state_pool_UTKWEGLD-c960d1.json"
         }
     ],
-    "hatomMoneyMarkets": [
-        {
-            "token": "HUTK-4fa4b2",
-            "address": "erd1qqqqqqqqqqqqqpgqta0tv8d5pjzmwzshrtw62n4nww9kxtl278ssspxpxu",
-            "stateFilename": "hatom_HUTK-4fa4b2.json"
-        }
-    ]
+    "hatomMoneyMarkets": []
 }
