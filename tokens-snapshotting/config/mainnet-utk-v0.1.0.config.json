@@ -87,5 +87,6 @@
             "address": "erd1qqqqqqqqqqqqqpgq0lzzvt2faev4upyf586tg38s84d7zsaj2jpsglugga",
             "stateFilename": "state_pool_UTKWEGLD-c960d1.json"
         }
-    ]
+    ],
+    "metabondingContractAddress": "erd1qqqqqqqqqqqqqpgq50dge6rrpcra4tp9hl57jl0893a4r2r72jpsk39rjj"
 }

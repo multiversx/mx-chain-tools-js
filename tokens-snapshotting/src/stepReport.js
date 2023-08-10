@@ -1,5 +1,5 @@
 const path = require("path");
-const { formatAmount } = require("./utils");
+const { formatAmount, BunchOfAccounts } = require("./utils");
 const { readJsonFile, asUserPath, writeTextFile, writeJsonFile } = require("./filesystem");
 const { default: BigNumber } = require("bignumber.js");
 const minimist = require("minimist");
@@ -8,72 +8,83 @@ const { Config } = require("./config");
 async function main(args) {
     const parsedArgs = minimist(args);
     const workspace = asUserPath(parsedArgs.workspace);
-    const outfile = asUserPath(parsedArgs.outfile);
+    const tag = parsedArgs.tag;
+    const rankingOutfile = asUserPath(`${tag}-ranking.json`);
     const configFile = parsedArgs.config;
 
     if (!workspace) {
         fail("Missing parameter 'workspace'! E.g. --workspace=~/myworkspace");
     }
-    if (!outfile) {
-        fail("Missing parameter 'outfile'! E.g. --outfile=~/report.txt");
+    if (!tag) {
+        fail("Missing parameter 'tag'! E.g. --outfile=~/report.txt");
     }
     if (!configFile) {
         fail("Missing parameter 'config'! E.g. --config=config.json");
     }
 
     const config = Config.load(configFile);
-    const report = {
-        users: gatherAccounts(workspace)
-    }
 
-    writeJsonFile(outfile, report);
+    const accountsData = readJsonFile(path.join(workspace, `accounts_with_unwrapped_tokens.json`));
+    const accounts = new BunchOfAccounts(accountsData);
+
+    const rankedAccountsRecords = rankAccounts(config, accounts);
+
+    writeJsonFile(rankingOutfile, {
+        accounts: rankedAccountsRecords
+    });
 
     let totalBaseToken = new BigNumber(0);
 
-    for (const user of report.users) {
-        totalBaseToken = totalBaseToken.plus(user.total);
+    for (const account of rankedAccountsRecords) {
+        totalBaseToken = totalBaseToken.plus(account.balance);
     }
 
     console.log("Total base token:", totalBaseToken.toFixed(0));
     console.log("Total base token (formatted):", formatAmount(totalBaseToken, 18));
 }
 
-function gatherAccounts(workspace) {
-    const inputPath = path.join(workspace, `accounts_with_unwrapped_tokens.json`);
-    const accountsData = readJsonFile(inputPath);
-    const accounts = [];
+function rankAccounts(config, bunchOfAccounts) {
+    const rankedAccounts = [];
 
-    for (const account of accountsData) {
+    for (const account of bunchOfAccounts.getAllAccounts()) {
+        if (account.address == config.metabondingContractAddress) {
+            continue;
+        }
+
         const total = computeTotalForAccount(account);
 
-        accounts.push({
-            address: account.address,
-            ...{ addressTag: account.addressTag },
+        if (total.isZero()) {
+            console.log("Skipping account", account.address, "because total is zero");
+            continue;
+        }
+
+        rankedAccounts.push({
+            ...account,
             total: total
         });
     }
 
-    accounts.sort((a, b) => {
+    rankedAccounts.sort((a, b) => {
         return b.total.comparedTo(a.total);
     });
 
-    const records = accounts.map((record, index) => {
+    const records = rankedAccounts.map((record, index) => {
         return {
             rank: index,
             address: record.address,
             ...{ addressTag: record.addressTag },
-            total: record.total.toFixed(0),
-            totalFormatted: formatAmount(record.total, 18)
+            balance: record.total.toFixed(0),
+            balanceFormatted: formatAmount(record.total, 18)
         };
     });
 
     return records;
 }
 
-function computeTotalForAccount(user) {
+function computeTotalForAccount(account) {
     let total = new BigNumber(0);
 
-    for (const token of user.tokens) {
+    for (const token of account.tokens) {
         const recovered = new BigNumber(token.unwrapped?.recovered || 0);
         const rewards = new BigNumber(token.unwrapped?.rewards || 0);
         total = total.plus(recovered);
@@ -81,6 +92,11 @@ function computeTotalForAccount(user) {
     }
 
     return total;
+}
+
+function fail(message) {
+    console.error(message);
+    process.exit(1);
 }
 
 (async () => {
@@ -91,5 +107,5 @@ function computeTotalForAccount(user) {
 
 module.exports = {
     main,
-    computeTotalForUser: computeTotalForAccount
+    computeTotalForAccount: computeTotalForAccount
 };
