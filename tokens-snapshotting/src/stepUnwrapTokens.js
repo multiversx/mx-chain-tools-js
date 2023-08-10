@@ -42,7 +42,28 @@ async function main(args) {
             contractsSummary: contractsSummary
         };
 
-        await unwrapTokens(context, config);
+        await unwrapTokens(context, config, (token, metadata) => metadata.shouldIgnore);
+    }
+
+    // Go again, now through all known contracts. Skip already touched tokens.
+    for (const account of accounts.data) {
+        const isKnownContract = config.isKnownContractAddress(account.address);
+        if (!isKnownContract) {
+            continue;
+        }
+
+        if (config.isFarm(account.address)) {
+            continue;
+        }
+
+        const context = {
+            checkpoints: checkpoints,
+            accountOnFocus: account,
+            accounts: accounts,
+            contractsSummary: contractsSummary
+        };
+
+        await unwrapTokens(context, config, (token, metadata) => metadata.isBaseToken || token.touched);
     }
 
     const outputPath = path.join(workspace, `accounts_with_unwrapped_tokens.json`);
@@ -66,16 +87,17 @@ async function main(args) {
 
     console.log("Total token:", total.toFixed(0));
     console.log("Total token (formatted):", new BigNumber(formatAmount(total, 18)).toFormat());
-
-    console.log("Total from LP", totalFromLp.toFixed(0));
-    console.log("Total from LP (formatted):", new BigNumber(formatAmount(totalFromLp, 18)).toFormat());
 }
 
-async function unwrapTokens(context, config) {
+async function unwrapTokens(context, config, shouldIgnore) {
     const tokens = context.accountOnFocus.tokens
 
     for (const token of tokens) {
         const metadata = config.getTokenMetadata(token.name);
+
+        if (shouldIgnore(token, metadata)) {
+            continue;
+        }
 
         if (metadata.isMetastakingToken) {
             token.unwrapped = await unwrapMetastakingToken(context, 0, token);
@@ -91,11 +113,11 @@ async function unwrapTokens(context, config) {
             throw new Error(`unknown token: ${token.name}`);
         }
 
-        if (token.unwrapped.recovered) {
+        if (token.unwrapped?.recovered) {
             token.unwrapped.recoveredFormatted = formatAmount(token.unwrapped.recovered, 18);
         }
 
-        if (token.unwrapped.rewards) {
+        if (token.unwrapped?.rewards) {
             token.unwrapped.rewardsFormatted = formatAmount(token.unwrapped.rewards, 18);
         }
     }
