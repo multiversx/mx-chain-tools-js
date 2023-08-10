@@ -1,0 +1,158 @@
+[
+  {
+    "mode": "NULLABLE",
+    "name": "address",
+    "type": "STRING"
+  },
+  {
+    "fields": [
+      {
+        "fields": [
+          {
+            "mode": "NULLABLE",
+            "name": "rewardsFormatted",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "rewards",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "lpFirstTokenAmountRecovered",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "fractionaryLpFarmTokenAmount",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "recoveredFormatted",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "recovered",
+            "type": "STRING"
+          }
+        ],
+        "mode": "NULLABLE",
+        "name": "unwrapped",
+        "type": "RECORD"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "attributes",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "creator",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "balance",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "nonce",
+        "type": "INTEGER"
+      },
+      {
+        "fields": [
+          {
+            "mode": "NULLABLE",
+            "name": "initialFarmingAmount",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "enteringEpoch",
+            "type": "INTEGER"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "originalOwner",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "unlockEpoch",
+            "type": "INTEGER"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "stakingFarmTokenAmount",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "stakingFarmTokenNonce",
+            "type": "INTEGER"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "currentFarmAmount",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "lpFarmTokenAmount",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "compoundedReward",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "rewardPerShare",
+            "type": "INTEGER"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "originalEnteringEpoch",
+            "type": "INTEGER"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "lpFarmTokenNonce",
+            "type": "INTEGER"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "type",
+            "type": "STRING"
+          }
+        ],
+        "mode": "NULLABLE",
+        "name": "decodedAttributes",
+        "type": "RECORD"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "name",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "id",
+        "type": "STRING"
+      }
+    ],
+    "mode": "REPEATED",
+    "name": "tokens",
+    "type": "RECORD"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "shard",
+    "type": "INTEGER"
+  }
+]
