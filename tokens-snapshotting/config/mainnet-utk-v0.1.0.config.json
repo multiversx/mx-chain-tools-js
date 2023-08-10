@@ -40,6 +40,9 @@
         "UTKWEGLDF-5b9d50": {
             "isFarmToken": true,
             "isFarmTokenV1_3": true
+        },
+        "HUTK-4fa4b2": {
+            "shouldIgnore": true
         }
     },
     "farms": [

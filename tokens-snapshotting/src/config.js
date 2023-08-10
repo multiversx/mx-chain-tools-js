@@ -48,6 +48,11 @@ class Config {
     isKnownContractAddress(address) {
         return this.indexKnownContractByAddress[address] !== undefined;
     }
+
+    isFarm(address) {
+        const tag = this.getTagOfAddress(address);
+        return tag && tag.indexOf("farm") == 0;
+    }
 }
 
 module.exports = {
