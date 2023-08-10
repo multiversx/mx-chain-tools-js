@@ -71,19 +71,17 @@ async function main(args) {
 
     console.log(JSON.stringify(checkpoints, null, 4));
 
+    const stakingToken = config.getStakingToken();
+    const notRedistributedStakingRewards = contractsSummary.getFarmByTokenName(stakingToken).notRedistributedRewards;
+
     const total = new BigNumber(checkpoints.$foundBaseToken)
         .plus(checkpoints.$recoveredFromStakingFarm)
         .plus(checkpoints.$recoveredStakingFarmRewards)
         .plus(checkpoints.$recoveredFromLpViaMetastaking)
         .plus(checkpoints.$recoveredStakingFarmRewardsViaMetastaking)
-        .plus(checkpoints.$recoveredFromHatomMoneyMarket)
-        .plus(checkpoints.$recoveredFromLpViaFarm)
-        .plus(checkpoints.$recoveredFromLp);
-
-    const totalFromLp = new BigNumber(0)
         .plus(checkpoints.$recoveredFromLpViaFarm)
         .plus(checkpoints.$recoveredFromLp)
-        .plus(checkpoints.$recoveredFromLpViaMetastaking);
+        .plus(notRedistributedStakingRewards);
 
     console.log("Total token:", total.toFixed(0));
     console.log("Total token (formatted):", new BigNumber(formatAmount(total, 18)).toFormat());

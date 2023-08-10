@@ -78,6 +78,8 @@ async function createFarmsSummary(contractStateProvider, config) {
         const rewardTokenBalance = getESDTBalance(state, rewardTokenId);
         const farmingTokenBalance = getESDTBalance(state, farmingTokenId);
 
+        const notRedistributedRewards = rewardCapacity.minus(accumulatedRewards);
+
         result[item.token] = {
             name: item.token,
             contractAddress: item.address,
@@ -91,7 +93,8 @@ async function createFarmsSummary(contractStateProvider, config) {
             rewardCapacity: rewardCapacity.toFixed(),
             rewardReserve: rewardReserve.toFixed(),
             rewardTokenBalance: rewardTokenBalance.toFixed(),
-            farmingTokenBalance: farmingTokenBalance.toFixed()
+            farmingTokenBalance: farmingTokenBalance.toFixed(),
+            notRedistributedRewards: notRedistributedRewards.toFixed()
         };
     }
 

@@ -37,6 +37,16 @@ class Config {
         return metadata;
     }
 
+    getStakingToken() {
+        for (const [tokenName, metadata] of Object.entries(this.tokensMetadata)) {
+            if (metadata.isStakingToken) {
+                return tokenName;
+            }
+        }
+
+        throw new Error("cannot find staking token");
+    }
+
     getTagOfAddress(address) {
         return this.indexTagByAddress[address];
     }
