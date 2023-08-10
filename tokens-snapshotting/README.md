@@ -109,5 +109,5 @@ You can get a snapshot for a given address (and round) as follows:
 ```
 export ADDRESS=erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3zpz3hypefsdd8ssycr6th
 
-node ./unwrapTokensOnline.js --config=${CONFIG} --round=${ROUND} --address=${ADDRESS} --outfile=online_${ADDRESS}.json
+node ./src/unwrapTokensOnline.js --config=${CONFIG} --round=${ROUND} --address=${ADDRESS} --outfile=online_${ADDRESS}.json
 ```

@@ -105,8 +105,7 @@ async function main() {
     const contracts = []
         .concat(config.pools)
         .concat(config.farms)
-        .concat(config.metastakingFarms)
-        .concat(config.hatomMoneyMarkets);
+        .concat(config.metastakingFarms);
 
     for (const contract of contracts) {
         // TODO: Fix hardcoded shard = 1 (DEX contracts are in shard 1).

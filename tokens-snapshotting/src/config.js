@@ -21,11 +21,6 @@ class Config {
             this.indexTagByAddress[item.address] = `pool-${item.token}`;
             this.indexKnownContractByAddress[item.address] = item;
         }
-
-        for (const item of this.hatomMoneyMarkets) {
-            this.indexTagByAddress[item.address] = `hatom-money-market-${item.token}`;
-            this.indexKnownContractByAddress[item.address] = item;
-        }
     }
 
     static load(filename) {

@@ -8,8 +8,7 @@
         "SUTK-ba35f3",
         "METAUTK-291e0e",
         "METAUTKLK-e6a445",
-        "METAUTKLK-112f52",
-        "HUTK-4fa4b2"
+        "METAUTKLK-112f52"
     ],
     "tokensMetadata": {
         "UTK-2f80e9": {
@@ -41,9 +40,6 @@
         "UTKWEGLDF-5b9d50": {
             "isFarmToken": true,
             "isFarmTokenV1_3": true
-        },
-        "HUTK-4fa4b2": {
-            "isHatomMoneyMarketToken": true
         }
     },
     "farms": [
@@ -91,6 +87,5 @@
             "address": "erd1qqqqqqqqqqqqqpgq0lzzvt2faev4upyf586tg38s84d7zsaj2jpsglugga",
             "stateFilename": "state_pool_UTKWEGLD-c960d1.json"
         }
-    ],
-    "hatomMoneyMarkets": []
+    ]
 }

@@ -78,15 +78,6 @@ class ContractsSummary {
 
         return metadata;
     }
-
-    getHatomMoneyMarketByTokenName(tokenName) {
-        const metadata = this.data.hatomMoneyMarkets[tokenName];
-        if (!metadata) {
-            throw new Error(`cannot get metadata for hatom contract: ${tokenName}`);
-        }
-
-        return metadata;
-    }
 }
 
 function formatAmount(amount, numDecimals) {

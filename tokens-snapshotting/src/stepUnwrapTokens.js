@@ -2,7 +2,6 @@ const path = require("path");
 const { BigNumber } = require("bignumber.js");
 const { asUserPath, readJsonFile, writeJsonFile } = require("./filesystem");
 const { BunchOfAccounts, ContractsSummary, formatAmount } = require("./utils.js");
-const { Address } = require("@multiversx/sdk-core");
 const minimist = require("minimist");
 const { Config } = require("./config.js");
 const { Checkpoints } = require("./checkpoints.js");
@@ -35,14 +34,6 @@ async function main(args) {
         if (isKnownContract) {
             continue;
         }
-
-        if (new Address(account.address).isContractAddress()) {
-            checkpoints.accumulate("numContracts", 1);
-        } else {
-            checkpoints.accumulate("numUsers", 1);
-        }
-
-        checkpoints.accumulate("numAccounts", 1);
 
         const context = {
             checkpoints: checkpoints,
@@ -96,8 +87,6 @@ async function unwrapTokens(context, config) {
             token.unwrapped = await unwrapLpFarmToken(context, 0, token);
         } else if (metadata.isBaseToken) {
             token.unwrapped = await unwrapBaseToken(context, 0, token);
-        } else if (metadata.isHatomMoneyMarketToken) {
-            token.unwrapped = await unwrapHatomMoneyMarketToken(context, 0, token);
         } else {
             throw new Error(`unknown token: ${token.name}`);
         }
@@ -151,16 +140,14 @@ async function unwrapMetastakingToken(context, indentation, metastakingToken) {
     const fractionaryStakingFarmTokenAmount = fraction.multipliedBy(new BigNumber(stakingFarmToken.balance))
     const fractionaryLpFarmTokenAmount = fraction.multipliedBy(new BigNumber(lpFarmToken.balance))
 
-    const stakingFarmRewards = new BigNumber(stakingFarmSummary.rewardPerShare).minus(stakingFarmTokenAttributes.rewardPerShare)
-        .multipliedBy(fractionaryStakingFarmTokenAmount)
-        .dividedBy(stakingFarmSummary.divisionSafetyNumber);
-
-    const lpFarmFarmedAmount = new BigNumber(lpFarmSummary.rewardPerShare).minus(lpFarmTokenAttributes.rewardPerShare)
-        .multipliedBy(fractionaryLpFarmTokenAmount)
-        .dividedBy(lpFarmSummary.divisionSafetyNumber);
-
     // We will simulate a "remove_liquidity":
-    const lpFirstTokenAmountRecovered = fractionaryLpFarmTokenAmount.multipliedBy(poolSummary.reserveFirstToken).dividedBy(poolSummary.lpTokenSupply);
+    const lpFirstTokenAmountRecovered = fractionaryLpFarmTokenAmount
+        .multipliedBy(poolSummary.reserveFirstToken)
+        .dividedBy(poolSummary.lpTokenSupply);
+
+    const stakingFarmRewards = new BigNumber(stakingFarmSummary.rewardPerShare).minus(stakingFarmTokenAttributes.rewardPerShare)
+        .multipliedBy(lpFirstTokenAmountRecovered)
+        .dividedBy(stakingFarmSummary.divisionSafetyNumber);
 
     stakingFarmToken.touched = true;
     lpFarmToken.touched = true;
@@ -169,9 +156,7 @@ async function unwrapMetastakingToken(context, indentation, metastakingToken) {
     context.checkpoints.accumulate("$recoveredStakingFarmRewardsViaMetastaking", stakingFarmRewards);
 
     return {
-        fractionaryLpFarmTokenAmount: fractionaryLpFarmTokenAmount.toFixed(),
-        lpFirstTokenAmountRecovered: lpFirstTokenAmountRecovered.toFixed(),
-        recovered: lpFirstTokenAmountRecovered.toFixed(),
+        recovered: lpFirstTokenAmountRecovered,
         rewards: stakingFarmRewards.toFixed()
     };
 }
@@ -187,10 +172,14 @@ async function unwrapStakingToken(context, indentation, stakingToken) {
     context.checkpoints.accumulate("$recoveredFromStakingFarm", recoveredBalance);
 
     if (tokenType == "unboundFarmToken") {
+        context.checkpoints.accumulate("$stakingInUnbondPeriod", recoveredBalance);
+
         return {
             recovered: recoveredBalance,
         };
     }
+
+    context.checkpoints.accumulate("$stakingButNotInUnbondPeriod", recoveredBalance);
 
     if (tokenType == "stakingFarmToken") {
         const rewards = new BigNumber(stakingFarmSummary.rewardPerShare).minus(stakingFarmTokenAttributes.rewardPerShare)
@@ -240,21 +229,6 @@ async function unwrapLpFarmToken(context, indentation, lpFarmToken) {
     return {
         lpFirstTokenAmountRecovered: lpFirstTokenAmountRecovered.toFixed(),
         recovered: lpFirstTokenAmountRecovered.toFixed()
-    };
-}
-
-async function unwrapHatomMoneyMarketToken(context, indentation, hatomToken) {
-    console.log(indent(indentation), "unwrapHatomMoneyMarketToken()", hatomToken.name, hatomToken.nonce);
-
-    const marketSummary = context.contractsSummary.getHatomMoneyMarketByTokenName(hatomToken.name);
-    const liquidity = new BigNumber(marketSummary.liquidity);
-    const totalSupply = new BigNumber(marketSummary.totalSupply);
-    const underlyingAmount = liquidity.multipliedBy(hatomToken.balance).dividedBy(totalSupply);
-
-    context.checkpoints.accumulate("$recoveredFromHatomMoneyMarket", underlyingAmount);
-
-    return {
-        recovered: underlyingAmount.toFixed()
     };
 }
 

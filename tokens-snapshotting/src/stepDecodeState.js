@@ -36,8 +36,7 @@ async function main(args) {
         {
             farms: await createFarmsSummary(contractStateProvider, config),
             metastakingFarms: await createMetastakingSummary(contractStateProvider, config),
-            pools: await createPoolsSummary(contractStateProvider, config),
-            hatomMoneyMarkets: await createHatomMoneyMarketsSummary(contractStateProvider, config)
+            pools: await createPoolsSummary(contractStateProvider, config)
         }
     );
 
@@ -149,36 +148,6 @@ async function createPoolsSummary(contractStateProvider, config) {
             reserveFirstToken: reserveFirstToken.toFixed(),
             reserveSecondToken: reserveSecondToken.toFixed()
         }
-    }
-
-    return result;
-}
-
-async function createHatomMoneyMarketsSummary(contractStateProvider, config) {
-    const result = {};
-
-    for (const item of config.hatomMoneyMarkets) {
-        const state = await contractStateProvider.getState(item);
-
-        const totalSupply = bufferToBigInt(Buffer.from(state[Buffer.from("total_supply").toString("hex")], "hex"));
-        const cash = bufferToBigInt(Buffer.from(state[Buffer.from("cash").toString("hex")], "hex"));
-        const totalBorrows = bufferToBigInt(Buffer.from(state[Buffer.from("total_borrows").toString("hex")], "hex"));
-        const totalReserves = bufferToBigInt(Buffer.from(state[Buffer.from("total_reserves").toString("hex")], "hex"));
-        const wad = new BigNumber("1000000000000000000");
-
-        const liquidity = cash.plus(totalBorrows).minus(totalReserves);
-        const exchangeRate = liquidity.dividedBy(totalSupply).times(wad);
-
-        result[item.token] = {
-            contractAddress: item.address,
-            totalSupply: totalSupply.toFixed(),
-            cash: cash.toFixed(),
-            totalBorrows: totalBorrows.toFixed(),
-            totalReserves: totalReserves.toFixed(),
-            liquidity: liquidity.toFixed(),
-            exchangeRate: exchangeRate.toFixed(),
-            wad: wad.toFixed()
-        };
     }
 
     return result;

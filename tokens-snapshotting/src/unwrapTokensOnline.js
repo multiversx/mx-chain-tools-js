@@ -135,6 +135,11 @@ function extractTokenNameFromTokenIdentifier(tokenIdentifier) {
     return `${parts[0]}-${parts[1]}`;
 }
 
+function fail(message) {
+    console.error(message);
+    process.exit(1);
+}
+
 (async () => {
     if (require.main === module) {
         await main();
