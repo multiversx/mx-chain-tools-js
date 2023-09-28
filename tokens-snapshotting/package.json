@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "test": "mocha"
+  },
+  "dependencies": {
+    "@multiversx/sdk-core": "12.5.0",
+    "@multiversx/sdk-exchange": "0.2.17",
+    "@multiversx/sdk-network-providers": "1.5.0",
+    "bignumber.js": "9.0.1",
+    "minimist": "1.2.8",
+    "chai": "4.2.0",
+    "mocha": "9.2.2"
+  }
+}

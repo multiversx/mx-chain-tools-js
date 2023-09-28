@@ -1,0 +1,14 @@
+[
+    {
+        "name": "address",
+        "type": "STRING"
+    },
+    {
+        "name": "key",
+        "type": "STRING"
+    },
+    {
+        "name": "value",
+        "type": "STRING"
+    }
+]
