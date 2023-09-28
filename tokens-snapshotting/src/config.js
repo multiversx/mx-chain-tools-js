@@ -4,6 +4,10 @@ class Config {
     constructor(data) {
         Object.assign(this, data);
 
+        this.farms = this.farms || [];
+        this.metastakingFarms = this.metastakingFarms || [];
+        this.pools = this.pools || [];
+
         this.indexTagByAddress = {};
         this.indexKnownContractByAddress = {};
 
